@@ -1,6 +1,34 @@
 import { Request, Response } from "express";
+import { redisClient } from "../config/redis";
 import * as studentService from "../services/student.service";
 import { CreateStudentDto, UpdateStudentDto } from "../types/student.types";
+import hashUrl from "../utils/hashUrl";
+
+const invalidateStudentCache = async (
+  req: Request,
+  studentId?: string
+): Promise<void> => {
+  try {
+    const host = req.get("host");
+
+    if (!host) {
+      return;
+    }
+
+    const baseUrl = `${req.protocol}://${host}`;
+    const cacheUrls = [`${baseUrl}/api/students`];
+
+    if (studentId) {
+      cacheUrls.push(`${baseUrl}/api/students/${studentId}`);
+    }
+
+    await Promise.all(
+      cacheUrls.map((url) => redisClient.del(hashUrl(url)))
+    );
+  } catch (error) {
+    console.error("Student Cache Invalidation Error:", error);
+  }
+};
 
 export const createStudent = async (
   req: Request<{}, {}, CreateStudentDto>,
@@ -31,6 +59,10 @@ export const createStudent = async (
       course,
       age: normalizedAge,
     });
+
+    if (result.statusCode >= 200 && result.statusCode < 300) {
+      await invalidateStudentCache(req);
+    }
 
     res.status(result.statusCode).json(result);
   } catch (error) {
@@ -99,6 +131,10 @@ export const updateStudent = async (
 
     const result = await studentService.updateStudent(id, req.body);
 
+    if (result.statusCode >= 200 && result.statusCode < 300) {
+      await invalidateStudentCache(req, id);
+    }
+
     res.status(result.statusCode).json(result);
   } catch (error) {
     console.error("Update Student Controller Error:", error);
@@ -118,6 +154,10 @@ export const deleteStudent = async (
     const { id } = req.params;
 
     const result = await studentService.deleteStudent(id);
+
+    if (result.statusCode >= 200 && result.statusCode < 300) {
+      await invalidateStudentCache(req, id);
+    }
 
     res.status(result.statusCode).json(result);
   } catch (error) {

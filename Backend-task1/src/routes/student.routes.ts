@@ -10,6 +10,8 @@ import {
 
 import verifyToken from "../middleware/verifyToken";
 import authorizeRole from "../middleware/authorizeRole";
+import preCache from "../middleware/preCache";
+import postCache from "../middleware/postCache";
 
 const router = Router();
 
@@ -25,14 +27,14 @@ router.post("/", verifyToken, createStudent);
  * @desc Get All Students
  * @access Private
  */
-router.get("/", verifyToken, getAllStudents);
+router.get("/", verifyToken, preCache, postCache, getAllStudents);
 
 /**
  * @route GET /api/students/:id
  * @desc Get Student By Id
  * @access Private
  */
-router.get("/:id", verifyToken, getStudentById);
+router.get("/:id", verifyToken, preCache, postCache, getStudentById);
 
 /**
  * @route PUT /api/students/:id

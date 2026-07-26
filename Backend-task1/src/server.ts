@@ -5,6 +5,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = require("./app").default;
+const { connectRedis } = require("./config/redis");
+
+void connectRedis().catch((error: unknown) => {
+  console.error("Redis connection failed. Continuing without cache:", error);
+});
 
 const PORT = process.env.PORT || 5000;
 
